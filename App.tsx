@@ -14,7 +14,9 @@ import {
   Radio,
   Play,
   Pause,
-  Users
+  Users,
+  X,
+  Share2
 } from 'lucide-react';
 import { CardConfig, VerseSegment, BackgroundType } from './types';
 import { SURAHS, LANGUAGES as TRANS_LANGUAGES, UI_TRANSLATIONS } from './constants';
@@ -31,6 +33,9 @@ export default function App() {
   
   const [loading, setLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  
+  // Save Modal State (For In-App Browsers)
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   
   // Radio State
   const [isRadioPlaying, setIsRadioPlaying] = useState(false);
@@ -54,6 +59,13 @@ export default function App() {
   // Visitor Counter State
   const [visitorCount, setVisitorCount] = useState<number>(0);
 
+  // Detect In-App Browser (Facebook, Instagram)
+  const isInAppBrowser = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera || '';
+    return /FBAN|FBAV|Instagram/i.test(ua);
+  }, []);
+
   // Base settings are fixed for simplicity in this version
   const baseSettings = {
     fontSize: 55,
@@ -74,7 +86,6 @@ export default function App() {
   }, [uiLang]);
 
   // Fix Google Fonts CORS for html-to-image
-  // OPTIMIZATION: Deferred this heavy task to run after the initial render
   useEffect(() => {
     const timer = setTimeout(() => {
         const inlineGoogleFonts = async () => {
@@ -93,7 +104,7 @@ export default function App() {
         }
         };
         inlineGoogleFonts();
-    }, 2000); // Wait 2 seconds before running heavy network/DOM tasks
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -102,7 +113,6 @@ export default function App() {
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        // Using counterapi.dev - free public counter
         const NAMESPACE = 'quran-card-design-karim-app-v1';
         const KEY = 'visits';
         const res = await fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${KEY}/up`);
@@ -114,7 +124,6 @@ export default function App() {
         console.warn("Counter API failed", error);
       }
     };
-    // Small delay to prioritize UI paint
     const t = setTimeout(fetchCount, 500);
     return () => clearTimeout(t);
   }, []);
@@ -149,13 +158,12 @@ export default function App() {
     return () => resizeObserver.disconnect();
   }, [cards]);
 
-  // Fetch Verse Previews when Surah changes
+  // Fetch Verse Previews
   useEffect(() => {
     const fetchVersesPreview = async () => {
       setLoadingVerses(true);
-      setPreviewVerses([]); // Clear old previews
+      setPreviewVerses([]); 
       try {
-        // Using api.alquran.cloud for simple text preview (Standard Arabic)
         const response = await fetch(`https://api.alquran.cloud/v1/surah/${selectedSurah}`);
         const data = await response.json();
         if (data && data.data && data.data.ayahs) {
@@ -163,7 +171,6 @@ export default function App() {
         }
       } catch (error) {
         console.error("Failed to fetch verse previews", error);
-        // Fallback handled by UI (will just show numbers if array is empty)
       } finally {
         setLoadingVerses(false);
       }
@@ -204,10 +211,6 @@ export default function App() {
                           audioRef.current?.pause();
                           setIsRadioPlaying(false);
                       });
-                      navigator.mediaSession.setActionHandler('stop', () => {
-                           audioRef.current?.pause();
-                           setIsRadioPlaying(false);
-                      });
                   }
               }).catch(e => {
                   console.error("Audio playback error:", e);
@@ -230,16 +233,13 @@ export default function App() {
     }
 
     setLoading(true);
-    // Note: We do NOT clear cards here to prevent UI jumping. We use the loading overlay.
     
-    // On mobile, collapse sidebar after search
     if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
     }
     
     try {
       const finalEndAyah = isRangeMode ? endAyah : undefined;
-      
       const { segments, design } = await fetchVerseAndDesign(selectedSurah, startAyah, finalEndAyah, selectedLanguage);
       
       const newCards: CardConfig[] = segments.map(segment => ({
@@ -252,8 +252,6 @@ export default function App() {
       }));
 
       setCards(newCards);
-      
-      // Reset refs
       cardRefs.current = newCards.map(() => null);
       containerRefs.current = newCards.map(() => null);
 
@@ -273,12 +271,9 @@ export default function App() {
     setDownloadingId(index);
 
     try {
-      // Critical: Wait for fonts to be ready
       await document.fonts.ready;
-      // Extra buffer for image decoding
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Load library dynamically
       const { toPng, toJpeg } = await import('html-to-image');
 
       const fileName = `quran-card-${verse.surah}-${verse.ayah}`;
@@ -292,27 +287,32 @@ export default function App() {
 
       let dataUrl: string | undefined;
 
-      // Strategy 1: High Quality PNG + Cache Bust (Best for desktop)
-      try {
-          dataUrl = await toPng(ref, { 
-              ...commonOptions, 
-              pixelRatio: 1.5,
-              cacheBust: true 
-          });
-      } catch (e) { console.warn("Strategy 1 failed", e); }
-
-      // Strategy 2: High Quality PNG + No Cache Bust (Fallback for CORS edge cases)
-      if (!dataUrl) {
+      // Strategy 1: If In-App Browser, Prioritize JPEG + Standard Quality for reliability
+      if (isInAppBrowser) {
           try {
+               dataUrl = await toJpeg(ref, { 
+                  ...commonOptions, 
+                  pixelRatio: 1, 
+                  quality: 0.95,
+                  backgroundColor: '#000000',
+                  cacheBust: true 
+               });
+          } catch (e) { console.warn("FB Strategy failed", e); }
+      }
+
+      // Standard Strategies if not in-app, or if FB strategy failed
+      if (!dataUrl) {
+           // High Quality PNG
+           try {
               dataUrl = await toPng(ref, { 
                   ...commonOptions, 
                   pixelRatio: 1.5,
-                  cacheBust: false
+                  cacheBust: true 
               });
-          } catch (e) { console.warn("Strategy 2 failed", e); }
+           } catch (e) { console.warn("Strategy 1 failed", e); }
       }
 
-      // Strategy 3: Standard Quality PNG (Best for mobile memory)
+      // Fallback strategies...
       if (!dataUrl) {
           try {
               dataUrl = await toPng(ref, { 
@@ -323,7 +323,6 @@ export default function App() {
           } catch (e) { console.warn("Strategy 3 failed", e); }
       }
 
-      // Strategy 4: JPEG (Ultimate fallback, no transparency but very reliable)
       if (!dataUrl) {
            try {
               dataUrl = await toJpeg(ref, { 
@@ -337,10 +336,16 @@ export default function App() {
       }
 
       if (dataUrl) {
-          const link = document.createElement('a');
-          link.download = `${fileName}.${dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}`;
-          link.href = dataUrl;
-          link.click();
+          // If In-App Browser, Show Modal for Manual Save
+          if (isInAppBrowser) {
+              setGeneratedImage(dataUrl);
+          } else {
+              // Standard Download
+              const link = document.createElement('a');
+              link.download = `${fileName}.${dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}`;
+              link.href = dataUrl;
+              link.click();
+          }
       } else {
           throw new Error("Generated image is empty");
       }
@@ -348,15 +353,12 @@ export default function App() {
     } catch (err: any) {
       console.error("Download failed full error:", err);
       let errorMessage = t.downloadError;
-      
-      // Safely stringify error
       if (err) {
          try {
              const str = err.message || JSON.stringify(err);
              if (str && str !== '{}') errorMessage += ` (${str.substring(0, 100)})`;
          } catch(e) {}
       }
-      
       alert(errorMessage);
     } finally {
       setDownloadingId(null);
@@ -401,6 +403,39 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-gray-100 font-cairo flex flex-col">
       
+      {/* Save Image Modal for In-App Browsers */}
+      {generatedImage && (
+        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+           <div className="w-full max-w-lg flex flex-col items-center">
+               <div className="w-full flex justify-end mb-2">
+                   <button onClick={() => setGeneratedImage(null)} className="p-2 bg-zinc-800 rounded-full text-white hover:bg-zinc-700">
+                       <X className="w-6 h-6" />
+                   </button>
+               </div>
+               
+               <div className="bg-zinc-900 p-2 rounded-xl border border-zinc-700 shadow-2xl mb-6 w-full max-h-[60vh] flex items-center justify-center overflow-hidden">
+                   <img src={generatedImage} alt="Generated Card" className="max-w-full max-h-full object-contain rounded-lg" />
+               </div>
+
+               <div className="text-center space-y-3">
+                   <h3 className="text-xl font-bold text-gold-400 flex items-center justify-center gap-2">
+                       <Share2 className="w-5 h-5" />
+                       {t.saveModalTitle}
+                   </h3>
+                   <p className="text-zinc-300 text-sm leading-relaxed px-4">
+                       {t.saveModalDesc}
+                   </p>
+                   <button 
+                      onClick={() => setGeneratedImage(null)}
+                      className="mt-4 px-8 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg border border-zinc-700 transition-all font-medium"
+                   >
+                       {t.close}
+                   </button>
+               </div>
+           </div>
+        </div>
+      )}
+
       {/* Top Credits & Radio Bar */}
       <div className="bg-zinc-950 border-b border-zinc-800 py-2 px-4 lg:px-6 flex flex-col md:flex-row justify-between items-center gap-3 text-[10px] lg:text-xs font-medium text-zinc-500 select-none relative z-50">
          <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 md:gap-4 order-2 md:order-1 w-full md:w-auto">

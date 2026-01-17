@@ -74,7 +74,10 @@ export const UI_TRANSLATIONS = {
     errorTitle: "عذراً، حدث خطأ",
     errorRetry: "يرجى المحاولة مرة أخرى.",
     downloadError: "فشل تحميل الصورة. قد يكون السبب ضعف الاتصال أو حظر أمني للمتصفح. حاول مرة أخرى.",
-    rangeError: "يجب أن تكون آية النهاية أكبر من أو تساوي آية البداية"
+    rangeError: "يجب أن تكون آية النهاية أكبر من أو تساوي آية البداية",
+    saveModalTitle: "حفظ الصورة",
+    saveModalDesc: "أنت تستخدم متصفح فيسبوك. لحفظ الصورة، يرجى الضغط مطولاً على الصورة أدناه ثم اختيار 'حفظ الصورة' أو 'Save Image'.",
+    close: "إغلاق"
   },
   en: {
     appTitle: "Quran Card Designer",
@@ -107,7 +110,10 @@ export const UI_TRANSLATIONS = {
     errorTitle: "Sorry, an error occurred",
     errorRetry: "Please try again.",
     downloadError: "Download failed. Please check your connection.",
-    rangeError: "End verse must be greater than or equal to start verse"
+    rangeError: "End verse must be greater than or equal to start verse",
+    saveModalTitle: "Save Image",
+    saveModalDesc: "You are using an in-app browser. To save, please long-press the image below and select 'Save Image'.",
+    close: "Close"
   }
 };
 
