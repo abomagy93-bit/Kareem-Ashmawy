@@ -17,7 +17,8 @@ import {
   Users,
   X,
   Share2,
-  ExternalLink
+  ExternalLink,
+  Save
 } from 'lucide-react';
 import { CardConfig, VerseSegment, BackgroundType } from './types';
 import { SURAHS, LANGUAGES as TRANS_LANGUAGES, UI_TRANSLATIONS } from './constants';
@@ -265,6 +266,28 @@ export default function App() {
     }
   };
 
+  // Helper to trigger native sharing
+  const shareImageFile = async (dataUrl: string, fileName: string) => {
+    try {
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `${fileName}.jpg`, { type: 'image/jpeg' });
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: t.appTitle,
+                text: t.charity
+            });
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.warn("Sharing failed", e);
+        return false;
+    }
+  };
+
   const handleDownload = async (index: number, verse: VerseSegment) => {
     const ref = cardRefs.current[index];
     if (!ref) return;
@@ -288,62 +311,43 @@ export default function App() {
 
       let dataUrl: string | undefined;
 
-      // Strategy 1: If In-App Browser, Prioritize JPEG + Standard Quality for reliability
-      if (isInAppBrowser) {
-          try {
-               dataUrl = await toJpeg(ref, { 
-                  ...commonOptions, 
-                  pixelRatio: 1, 
-                  quality: 0.95,
-                  backgroundColor: '#000000',
-                  cacheBust: true 
-               });
-          } catch (e) { console.warn("FB Strategy failed", e); }
-      }
+      // Strategy 1: Always use JPEG for social/in-app browsers (more compatible)
+      try {
+           dataUrl = await toJpeg(ref, { 
+              ...commonOptions, 
+              pixelRatio: 1, 
+              quality: 0.95,
+              backgroundColor: '#000000',
+              cacheBust: true 
+           });
+      } catch (e) { console.warn("Primary generation failed", e); }
 
-      // Standard Strategies if not in-app, or if FB strategy failed
+      // Fallback
       if (!dataUrl) {
-           // High Quality PNG
            try {
-              dataUrl = await toPng(ref, { 
-                  ...commonOptions, 
-                  pixelRatio: 1.5,
-                  cacheBust: true 
-              });
-           } catch (e) { console.warn("Strategy 1 failed", e); }
-      }
-
-      // Fallback strategies...
-      if (!dataUrl) {
-          try {
               dataUrl = await toPng(ref, { 
                   ...commonOptions, 
                   pixelRatio: 1, 
                   cacheBust: true 
               });
-          } catch (e) { console.warn("Strategy 3 failed", e); }
-      }
-
-      if (!dataUrl) {
-           try {
-              dataUrl = await toJpeg(ref, { 
-                  ...commonOptions, 
-                  pixelRatio: 1, 
-                  quality: 0.95,
-                  backgroundColor: '#000000',
-                  cacheBust: true 
-              });
-          } catch (e) { console.error("All strategies failed", e); throw e; }
+           } catch (e) { console.error("All generation strategies failed", e); throw e; }
       }
 
       if (dataUrl) {
-          // If In-App Browser, Show Modal for Manual Save
+          // Priority 1: In-App Browser -> Web Share API
           if (isInAppBrowser) {
-              setGeneratedImage(dataUrl);
+              const shared = await shareImageFile(dataUrl, fileName);
+              if (shared) {
+                  // If share triggered successfully, we are done
+                  return; 
+              } else {
+                  // If share not supported/failed, show modal fallback
+                  setGeneratedImage(dataUrl);
+              }
           } else {
-              // Standard Download
+              // Standard Browser -> Download Link
               const link = document.createElement('a');
-              link.download = `${fileName}.${dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}`;
+              link.download = `${fileName}.jpg`;
               link.href = dataUrl;
               link.click();
           }
@@ -404,7 +408,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-gray-100 font-cairo flex flex-col">
       
-      {/* Save Image Modal for In-App Browsers */}
+      {/* Save Image Modal for In-App Browsers (Fallback if Share API fails) */}
       {generatedImage && (
         <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
            <div className="w-full max-w-lg flex flex-col items-center">
@@ -414,13 +418,7 @@ export default function App() {
                    </button>
                </div>
                
-               <div className="bg-zinc-900 p-2 rounded-xl border border-zinc-700 shadow-2xl mb-4 w-full max-h-[60vh] flex items-center justify-center overflow-hidden relative">
-                   {/* 
-                     CRITICAL FIX for In-App Browsers:
-                     1. pointer-events-auto: Re-enable interaction if parent disabled it.
-                     2. select-auto: Allow selection (required for some context menus).
-                     3. WebkitTouchCallout: 'default' -> Forces iOS to show the long-press menu.
-                   */}
+               <div className="bg-zinc-900 p-1 rounded-xl border border-zinc-700 shadow-2xl mb-4 w-full max-h-[55vh] flex items-center justify-center overflow-hidden relative">
                    <img 
                      src={generatedImage} 
                      alt="Generated Card" 
@@ -428,28 +426,27 @@ export default function App() {
                      style={{ 
                        WebkitTouchCallout: 'default',
                        userSelect: 'auto',
-                       touchAction: 'auto'
                      }}
                    />
                </div>
 
                <div className="text-center space-y-3 w-full">
                    <h3 className="text-xl font-bold text-gold-400 flex items-center justify-center gap-2">
-                       <Share2 className="w-5 h-5" />
+                       <Save className="w-5 h-5" />
                        {t.saveModalTitle}
                    </h3>
                    <p className="text-zinc-300 text-sm leading-relaxed px-4">
                        {t.saveModalDesc}
                    </p>
                    
-                   {/* Fallback Direct Link Button */}
-                   <a 
-                     href={generatedImage} 
-                     className="mt-4 px-6 py-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg border border-emerald-600 transition-all font-bold w-full flex items-center justify-center gap-2 shadow-lg"
+                   {/* Primary Action: Share Sheet */}
+                   <button 
+                     onClick={() => shareImageFile(generatedImage, 'quran-card')} 
+                     className="mt-4 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-500 transition-all font-bold w-full flex items-center justify-center gap-2 shadow-lg animate-pulse"
                    >
-                     <ExternalLink className="w-5 h-5" />
-                     {uiLang === 'ar' ? 'عرض الصورة كاملة (حل بديل)' : 'Open Full Image (Alternative)'}
-                   </a>
+                     <Share2 className="w-5 h-5" />
+                     {t.shareNative}
+                   </button>
 
                    <button 
                       onClick={() => setGeneratedImage(null)}
