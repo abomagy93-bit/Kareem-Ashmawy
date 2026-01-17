@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo } from 'react';
+import React, { forwardRef, useMemo, useState, useEffect } from 'react';
 import { CardConfig, BackgroundType } from '../types';
 import { BACKGROUNDS, FOOTER_TEXT } from '../constants';
 import clsx from 'clsx';
@@ -11,7 +11,7 @@ interface VerseCardProps {
 const VerseCard = forwardRef<HTMLDivElement, VerseCardProps>(({ config, className }, ref) => {
   const { 
     verse = { arabic: '...', translation: '', surah: '', ayah: '' }, 
-    backgroundType = BackgroundType.NATURE, // Default to Nature
+    backgroundType = BackgroundType.NATURE, 
     showTranslation, 
     opacity = 0.5, 
     textColor = 'white' 
@@ -20,48 +20,62 @@ const VerseCard = forwardRef<HTMLDivElement, VerseCardProps>(({ config, classNam
   const normalizedType = (backgroundType?.toString().toUpperCase() || 'NATURE') as BackgroundType;
   const validBgKey = Object.keys(BACKGROUNDS).includes(normalizedType) 
     ? normalizedType 
-    : BackgroundType.NATURE; // Fallback to Nature
+    : BackgroundType.NATURE;
 
-  const bgImage = BACKGROUNDS[validBgKey];
+  // Select Image
+  const bgImage = useMemo(() => {
+    const images = BACKGROUNDS[validBgKey];
+    if (Array.isArray(images)) {
+        // Simple consistent hash based on verse info to keep the same image for the same verse if re-rendered
+        // but random enough for different verses
+        const seed = verse.arabic.length + (typeof verse.ayah === 'number' ? verse.ayah : 0);
+        return images[seed % images.length];
+    }
+    return images; 
+  }, [config, validBgKey, verse]);
   
-  // Always use image, no solid colors anymore per user request
+  // Image Error Handling State
+  const [imgError, setImgError] = useState(false);
+
+  // Reset error state when image changes
+  useEffect(() => {
+    setImgError(false);
+  }, [bgImage]);
+
   const finalTextColor = textColor;
 
-  // Ultra-Aggressive Font Scaling for verses like Baqarah 282
-  // UPDATED: Increased sizes for better clarity
+  // Dynamic Font Sizing
   const dynamicFontSize = useMemo(() => {
     if (!verse?.arabic) return 65;
-    const length = verse.arabic.length; // Tashkeel adds significant length
+    const length = verse.arabic.length;
     
-    if (length < 60) return 90;   // was 75
-    if (length < 120) return 72;  // was 60
-    if (length < 200) return 60;  // was 50
-    if (length < 300) return 52;  // was 42
-    if (length < 500) return 44;  // was 36
-    if (length < 800) return 36;  // was 30
-    if (length < 1200) return 28; // was 24
-    if (length < 1800) return 24; // was 20
-    if (length < 2500) return 20; // was 16
-    if (length < 3500) return 18; // was 14
-    return 16; // was 13
+    if (length < 60) return 90;
+    if (length < 120) return 72;
+    if (length < 200) return 60;
+    if (length < 300) return 52;
+    if (length < 500) return 44;
+    if (length < 800) return 36;
+    if (length < 1200) return 28;
+    if (length < 1800) return 24;
+    if (length < 2500) return 20;
+    if (length < 3500) return 18;
+    return 16;
   }, [verse?.arabic]);
 
   const translationFontSize = useMemo(() => {
     if (!verse?.translation) return 28;
     const length = verse.translation.length;
     
-    // If Arabic is huge, shrink translation to make space
     if (verse.arabic.length > 2000) return 18; 
     if (verse.arabic.length > 1000) return 20;
 
-    if (length < 50) return 40;   // was 32
-    if (length < 100) return 34;  // was 28
-    if (length < 200) return 30;  // was 24
-    if (length < 350) return 26;  // was 22
-    return 22; // was 18
+    if (length < 50) return 40;
+    if (length < 100) return 34;
+    if (length < 200) return 30;
+    if (length < 350) return 26;
+    return 22;
   }, [verse?.translation, verse?.arabic]);
 
-  // Dynamic Line Height
   const lineHeight = useMemo(() => {
     if (dynamicFontSize > 60) return 2.1;
     if (dynamicFontSize > 40) return 2.0;
@@ -69,26 +83,35 @@ const VerseCard = forwardRef<HTMLDivElement, VerseCardProps>(({ config, classNam
     return 1.9; 
   }, [dynamicFontSize]);
 
+  // Fallback Gradients based on type
+  const getFallbackGradient = () => {
+    switch(normalizedType) {
+        case BackgroundType.SKY: return 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900';
+        case BackgroundType.JANNAT: return 'bg-gradient-to-br from-emerald-900 via-teal-900 to-emerald-950';
+        case BackgroundType.NATURE: return 'bg-gradient-to-br from-stone-900 via-stone-800 to-zinc-900';
+        default: return 'bg-zinc-900';
+    }
+  };
+
   return (
     <div
       ref={ref}
       className={clsx(
         "relative overflow-hidden shadow-2xl flex flex-col items-center select-none",
         "w-[1080px] h-[1080px] origin-top-left",
-        "bg-zinc-900",
+        getFallbackGradient(), // Apply gradient as base color
         className
       )}
-      style={{
-        backgroundColor: '#18181b', // Default fallback
-      }}
     >
-      {/* Background Image Layer - Always present */}
-      {bgImage && (
+      {/* Background Image Layer */}
+      {bgImage && !imgError && (
         <img 
           src={bgImage}
           alt="background"
           crossOrigin="anonymous"
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          loading="eager"
+          onError={() => setImgError(true)} // Critical: Switches to gradient on error
+          className="absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-500"
           style={{ objectFit: 'cover' }}
         />
       )}
@@ -96,7 +119,7 @@ const VerseCard = forwardRef<HTMLDivElement, VerseCardProps>(({ config, classNam
       {/* Overlay */}
       <div 
         className="absolute inset-0 z-0 bg-black transition-opacity duration-300 pointer-events-none"
-        style={{ opacity: opacity }}
+        style={{ opacity: imgError ? 0.3 : opacity }} // Less opacity if showing gradient
       />
 
       {/* Borders */}

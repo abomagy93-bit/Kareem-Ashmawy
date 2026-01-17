@@ -1,18 +1,13 @@
-// Removed top-level import to speed up initial app load
-// import { GoogleGenAI, Type, Schema } from "@google/genai";
+// Removed GoogleGenAI import to maximize speed
 import { CombinedResponse, BackgroundType, VerseSegment, DesignConfig } from '../types';
 
-const MODEL_NAME = 'gemini-3-flash-preview';
-
 // Mapping user language selection to Quran API editions
-// Fixed German and Greek, and added new global languages
 const LANGUAGE_EDITIONS: Record<string, string> = {
   'English': 'en.sahih',
   'French': 'fr.hamidullah',
   'Spanish': 'es.cortes',
-  'German': 'de.bubenheim', // Changed from abullais for better reliability
+  'German': 'de.bubenheim',
   'Russian': 'ru.kuliev',
-  'Greek': 'el.vlachos', 
   'Indonesian': 'id.indonesian',
   'Turkish': 'tr.diyanet',
   'Urdu': 'ur.jalandhry',
@@ -27,16 +22,64 @@ function convertToArabicNumerals(n: number): string {
   return n.toString().replace(/\d/g, (d) => arabicDigits[parseInt(d)]);
 }
 
+// Instant client-side design logic
+function getDesignFromText(text: string): DesignConfig {
+    const lowerText = (text || '').toLowerCase();
+    
+    const keywords = {
+        [BackgroundType.JANNAT]: ['paradise', 'garden', 'river', 'heaven', 'reward', 'fruit', 'shade', 'eternity', 'jannah', 'bliss', 'springs', 'gold', 'silk', 'peace'],
+        [BackgroundType.SKY]: ['sky', 'sun', 'moon', 'star', 'night', 'day', 'cloud', 'rain', 'thunder', 'universe', 'light', 'darkness', 'space', 'planet', 'orbit', 'rising', 'setting'],
+        [BackgroundType.NATURE]: ['earth', 'mountain', 'sea', 'ocean', 'land', 'water', 'tree', 'plant', 'wind', 'creation', 'animal', 'bird', 'cattle', 'camel', 'desert', 'rock']
+    };
+
+    let scores = {
+        [BackgroundType.JANNAT]: 0,
+        [BackgroundType.SKY]: 0,
+        [BackgroundType.NATURE]: 0
+    };
+
+    // Fast frequency count
+    for (const [type, words] of Object.entries(keywords)) {
+        for (const word of words) {
+            if (lowerText.includes(word)) {
+                scores[type as BackgroundType]++;
+            }
+        }
+    }
+
+    // Select best match
+    const types = [BackgroundType.NATURE, BackgroundType.SKY, BackgroundType.JANNAT];
+    let bestType = BackgroundType.NATURE;
+    let maxScore = -1;
+
+    // Check scores
+    for (const t of types) {
+         if (scores[t] > maxScore) {
+             maxScore = scores[t];
+             bestType = t;
+         }
+    }
+
+    // If no keywords matched (score 0), pick a random one for variety
+    if (maxScore === 0) {
+        bestType = types[Math.floor(Math.random() * types.length)];
+    }
+
+    return {
+        backgroundType: bestType,
+        textColor: 'white', // White provides best contrast with current dark overlay style
+        opacity: 0.5
+    };
+}
+
 export const fetchVerseAndDesign = async (surahNumber: number, startAyah: number, endAyah?: number, language: string = 'English'): Promise<CombinedResponse> => {
-  // 1. Fetch Verses from Quran API
+  // 1. Fetch Verses from Quran API (This is the only network request now)
   const edition = LANGUAGE_EDITIONS[language] || 'en.sahih';
   
-  // Validate range
   const actualEndAyah = (endAyah && endAyah >= startAyah) ? endAyah : startAyah;
   const limit = actualEndAyah - startAyah + 1;
   const offset = startAyah - 1;
 
-  // Fetch both Arabic (Uthmani) and Translation
   const apiUrl = `https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,${edition}?offset=${offset}&limit=${limit}`;
   
   const response = await fetch(apiUrl);
@@ -45,25 +88,35 @@ export const fetchVerseAndDesign = async (surahNumber: number, startAyah: number
      throw new Error(`Quran API Error: ${response.status} - ${errorText}`);
   }
   
-  const data = await response.json();
+  const json = await response.json();
   
-  const arabicEd = data.data.find((d: any) => d.edition.type === 'quran');
-  const transEd = data.data.find((d: any) => d.edition.type === 'translation');
-  
-  if (!arabicEd || !transEd) {
-      throw new Error("Invalid response format from Quran API");
+  if (!json || !json.data || !Array.isArray(json.data)) {
+      throw new Error("Invalid response format from Quran API: data array missing");
   }
 
+  // More robust finding logic
+  // Arabic is usually quran-uthmani, or type: quran, language: ar
+  const arabicEd = json.data.find((d: any) => 
+    d.edition?.identifier === 'quran-uthmani' || 
+    (d.edition?.language === 'ar' && d.edition?.type === 'quran')
+  );
+  
+  // Translation is the other one, or type: translation
+  const otherEd = json.data.find((d: any) => 
+    d.edition?.identifier !== 'quran-uthmani' && d !== arabicEd
+  );
+
+  if (!arabicEd || !otherEd) {
+      throw new Error("Invalid response format from Quran API: missing Arabic or Translation editions");
+  }
+  
+  // Assign explicitly
   const arabicAyahs = arabicEd.ayahs;
-  const transAyahs = transEd.ayahs;
+  const transAyahs = otherEd.ayahs;
   const surahName = arabicEd.englishName;
 
-  // 2. Smart Grouping Logic (Content Density Balancing)
-  // Instead of a fixed number, we fill the card until it reaches a "visual limit"
+  // 2. Smart Grouping Logic
   const segments: VerseSegment[] = [];
-  
-  // Optimal Arabic character count per card to keep font large (~450 chars is a good balance)
-  // If a single verse is larger than this, it takes the whole card alone.
   const TARGET_CARD_CAPACITY = 450; 
 
   let currentChunkArabic: any[] = [];
@@ -72,100 +125,41 @@ export const fetchVerseAndDesign = async (surahNumber: number, startAyah: number
 
   for (let i = 0; i < arabicAyahs.length; i++) {
       const verse = arabicAyahs[i];
-      const trans = transAyahs[i];
+      const trans = transAyahs[i] || { text: '', numberInSurah: verse.numberInSurah }; // Fallback
       const verseLength = verse.text.length;
 
-      // Decision: Should we start a new card?
-      // Yes, if adding this verse exceeds capacity AND we already have verses in the buffer.
       if (currentLength + verseLength > TARGET_CARD_CAPACITY && currentChunkArabic.length > 0) {
-          // Push current buffer to segments
           pushSegment(segments, currentChunkArabic, currentChunkTrans, surahName);
-          
-          // Reset buffer
           currentChunkArabic = [];
           currentChunkTrans = [];
           currentLength = 0;
       }
 
-      // Add verse to current buffer
       currentChunkArabic.push(verse);
       currentChunkTrans.push(trans);
       currentLength += verseLength;
   }
 
-  // Push any remaining verses in the buffer
   if (currentChunkArabic.length > 0) {
       pushSegment(segments, currentChunkArabic, currentChunkTrans, surahName);
   }
 
-  // 3. AI Design (Using Translation for Context)
-  const contextText = segments[0]?.translation.substring(0, 500) || "";
-  
-  let design: DesignConfig = {
-      backgroundType: BackgroundType.NATURE,
-      textColor: 'white',
-      opacity: 0.5
-  };
-
-  try {
-      // Dynamic import to allow faster initial page load
-      const { GoogleGenAI, Type } = await import("@google/genai");
-
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `
-        Context: Quranic verses translation: "${contextText}".
-        Task: Choose a background theme based on meaning.
-        
-        Options:
-        - JANNAT: Words like Paradise, Garden, Rivers, Heaven, Reward, Fruit, Shade.
-        - SKY: Words like Sky, Sun, Moon, Stars, Night, Day, Clouds, Rain, Thunder, Universe.
-        - NATURE: Words like Earth, Mountain, Sea, Animals, Plants, Travel, Creation.
-        
-        Default to NATURE if unsure.
-        
-        Return JSON: { "backgroundType": "SKY" | "NATURE" | "JANNAT", "textColor": "white" | "black", "opacity": 0.6 }
-      `;
-
-      const aiResponse = await ai.models.generateContent({
-          model: MODEL_NAME,
-          contents: prompt,
-          config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                      backgroundType: { type: Type.STRING, enum: ["SKY", "NATURE", "JANNAT"] },
-                      textColor: { type: Type.STRING, enum: ["white", "black"] },
-                      opacity: { type: Type.NUMBER }
-                  }
-              }
-          }
-      });
-      
-      const result = JSON.parse(aiResponse.text || "{}");
-      
-      if (result.backgroundType) design.backgroundType = result.backgroundType as BackgroundType;
-      if (result.textColor) design.textColor = result.textColor as 'white' | 'black';
-      if (result.opacity) design.opacity = result.opacity;
-
-  } catch (e) {
-      console.warn("AI Design step failed, using default design.", e);
-  }
+  // 3. Instant Design (No API Latency)
+  // Use translation of the first segment to determine context
+  const contextText = segments[0]?.translation || "";
+  const design = getDesignFromText(contextText);
 
   return { segments, design };
 };
 
-// Helper to format and push a segment
 function pushSegment(segments: VerseSegment[], arabicChunk: any[], transChunk: any[], surahName: string) {
     const firstNum = arabicChunk[0].numberInSurah;
     const lastNum = arabicChunk[arabicChunk.length - 1].numberInSurah;
 
-    // Join Arabic with markers
     const arabicText = arabicChunk.map((a: any) => 
         `${a.text} ۝${convertToArabicNumerals(a.numberInSurah)}`
     ).join(' ');
 
-    // Join Translation with numbers
     const transText = transChunk.map((t: any) => 
         `${t.text} (${t.numberInSurah})`
     ).join(' ');

@@ -283,6 +283,9 @@ export default function App() {
           width: 1080,
           height: 1080,
           skipAutoScale: true, // Fix for mobile rendering
+          fetchRequestInit: {
+             mode: 'cors' as RequestMode,
+          },
           style: {
              transform: 'none', 
              transformOrigin: 'top left'
@@ -292,7 +295,6 @@ export default function App() {
       let dataUrl;
       try {
           // Dynamic Import to boost startup speed
-          // This library is heavy and not needed until download click
           const { toPng } = await import('html-to-image');
 
           // First attempt with cache busting (safest for fresh external images)
@@ -317,12 +319,26 @@ export default function App() {
           link.href = dataUrl;
           link.click();
       } else {
-          throw new Error("Failed to generate image data");
+          throw new Error("Failed to generate image data (URL is empty)");
       }
 
-    } catch (err) {
-      console.error("Download failed", err);
-      alert(t.downloadError);
+    } catch (err: any) {
+      // Improved Error Logging
+      console.error("Download failed full error:", err);
+      let errorMessage = t.downloadError;
+      
+      // Parse error object to avoid [object Object]
+      if (err) {
+         if (typeof err === 'string') errorMessage += ` (${err})`;
+         else if (err.message) errorMessage += ` (${err.message})`;
+         else if (err.type === 'error') errorMessage += " (Network/CORS Error)";
+         else try {
+             const str = JSON.stringify(err);
+             if (str !== '{}') errorMessage += ` (${str})`;
+         } catch(e) {}
+      }
+      
+      alert(errorMessage);
     } finally {
       setDownloadingId(null);
     }

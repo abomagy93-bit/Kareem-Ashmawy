@@ -1,10 +1,29 @@
 import { BackgroundType } from './types';
 
-// Optimized Unsplash images: q=60 and w=1280 for faster loading while maintaining good quality
-export const BACKGROUNDS: Record<BackgroundType, string> = {
-  [BackgroundType.SKY]: 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?q=60&w=1280&auto=format&fit=crop',
-  [BackgroundType.NATURE]: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?q=60&w=1280&auto=format&fit=crop',
-  [BackgroundType.JANNAT]: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=60&w=1280&auto=format&fit=crop', 
+// Highly stable, high-quality Unsplash IDs. 
+// Using precise dimensions (1280px) and quality (60) for optimal loading speed.
+export const BACKGROUNDS: Record<BackgroundType, string[]> = {
+  [BackgroundType.SKY]: [
+    'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=60&w=1280&fit=crop', // Night Sky
+    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=60&w=1280&fit=crop', // Yosemite Valley Stream
+    'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=60&w=1280&fit=crop', // Starry Sky
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=60&w=1280&fit=crop', // Beach Sky
+    'https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=60&w=1280&fit=crop', // Blue Clouds
+  ],
+  [BackgroundType.NATURE]: [
+    'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=60&w=1280&fit=crop', // Green Hills
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=60&w=1280&fit=crop', // Forest Light
+    'https://images.unsplash.com/photo-1426604966848-d7adac402bff?q=60&w=1280&fit=crop', // Mountain
+    'https://images.unsplash.com/photo-1501854140884-074bf6b24363?q=60&w=1280&fit=crop', // Lake
+    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=60&w=1280&fit=crop', // Landscape
+  ],
+  [BackgroundType.JANNAT]: [
+    'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=60&w=1280&fit=crop', // Garden
+    'https://images.unsplash.com/photo-1466781783310-bb1371c57752?q=60&w=1280&fit=crop', // Sunny Woods
+    'https://images.unsplash.com/photo-1596322646261-2b024472d825?q=60&w=1280&fit=crop', // Islamic Arch
+    'https://images.unsplash.com/photo-1490750967868-53cbaa379091?q=60&w=1280&fit=crop', // Spring
+    'https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=60&w=1280&fit=crop', // Soft Nature
+  ], 
 };
 
 export const FOOTER_TEXT = "صدقة جارية لأمي وجميع موتى المسلمين";
@@ -21,7 +40,6 @@ export const LANGUAGES = [
   { code: 'Italian', name: 'Italiano (الإيطالية)' },
   { code: 'Dutch', name: 'Nederlands (الهولندية)' },
   { code: 'Chinese', name: 'Chinese (الصينية)' },
-  { code: 'Greek', name: 'Ελληνικά (اليونانية)' },
 ];
 
 export const UI_TRANSLATIONS = {
