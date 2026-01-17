@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+// Removed top-level import to speed up initial app load
+// import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { CombinedResponse, BackgroundType, VerseSegment, DesignConfig } from '../types';
 
 const MODEL_NAME = 'gemini-3-flash-preview';
@@ -100,6 +101,9 @@ export const fetchVerseAndDesign = async (surahNumber: number, startAyah: number
   };
 
   try {
+      // Dynamic import to allow faster initial page load
+      const { GoogleGenAI, Type } = await import("@google/genai");
+
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `
         Context: Quranic verses translation: "${contextText}".

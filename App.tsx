@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { toPng } from 'html-to-image';
+// Removed top-level html-to-image import for performance
 import { 
   Download, 
   Loader2,
@@ -291,6 +291,10 @@ export default function App() {
 
       let dataUrl;
       try {
+          // Dynamic Import to boost startup speed
+          // This library is heavy and not needed until download click
+          const { toPng } = await import('html-to-image');
+
           // First attempt with cache busting (safest for fresh external images)
           dataUrl = await toPng(ref, { 
               ...commonOptions,
@@ -300,6 +304,7 @@ export default function App() {
           console.warn("First download attempt failed, retrying without cache bust...", firstErr);
           // Retry without cache busting (in case of CORS headers mismatch on cached items)
           await new Promise(resolve => setTimeout(resolve, 500));
+          const { toPng } = await import('html-to-image'); // Re-import safe
           dataUrl = await toPng(ref, { 
               ...commonOptions,
               cacheBust: false,
