@@ -7,14 +7,16 @@
     <meta name="description" content="صمم بطاقات القرآن الكريم باحترافية وسرعة.">
     <title>مصمم بطاقات القرآن الكريم</title>
     
-    <!-- Module Preloads for Speed -->
-    <link rel="modulepreload" href="https://esm.sh/react@^19.2.3">
-    <link rel="modulepreload" href="https://esm.sh/react-dom@^19.2.3">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Critical: Preconnect to Google Fonts for faster text rendering -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Tailwind CSS (CDN is kept as requested, but optimized build is recommended if possible) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700&family=Lateef&display=swap" rel="stylesheet">
+    
     <style>
       /* Critical CSS for immediate loading state */
       body { background-color: #09090b; color: #ffffff; margin: 0; font-family: 'Cairo', sans-serif; }
@@ -35,6 +37,7 @@
       .loading-text { color: #d4af37; font-size: 0.9rem; opacity: 0.8; animation: pulse 2s infinite; }
       @keyframes pulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.4; } }
     </style>
+    
     <script>
       tailwind.config = {
         theme: {
@@ -60,15 +63,15 @@
         },
       }
     </script>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "clsx": "https://esm.sh/clsx@^2.1.1",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "clsx": "https://esm.sh/clsx@^2.1.1",
     "html-to-image": "https://esm.sh/html-to-image@^1.11.13"
   }
 }
@@ -76,11 +79,13 @@
 </head>
   <body class="bg-zinc-950 font-cairo">
     <div id="root">
-      <!-- App Shell: Immediate visual feedback while React loads -->
+      <!-- App Shell -->
       <div class="app-loader">
         <div class="spinner"></div>
         <div class="loading-text">مصمم بطاقات القرآن</div>
       </div>
     </div>
+    <!-- Entry point -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

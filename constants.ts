@@ -1,10 +1,10 @@
 import { BackgroundType } from './types';
 
-// High-quality Unsplash images for backgrounds (Nature, Sky, Gardens only)
+// Optimized Unsplash images: q=60 and w=1280 for faster loading while maintaining good quality
 export const BACKGROUNDS: Record<BackgroundType, string> = {
-  [BackgroundType.SKY]: 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?q=80&w=1920&auto=format&fit=crop',
-  [BackgroundType.NATURE]: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?q=80&w=1920&auto=format&fit=crop',
-  [BackgroundType.JANNAT]: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=80&w=1920&auto=format&fit=crop', // Lush garden/flowers
+  [BackgroundType.SKY]: 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?q=60&w=1280&auto=format&fit=crop',
+  [BackgroundType.NATURE]: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?q=60&w=1280&auto=format&fit=crop',
+  [BackgroundType.JANNAT]: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=60&w=1280&auto=format&fit=crop', 
 };
 
 export const FOOTER_TEXT = "صدقة جارية لأمي وجميع موتى المسلمين";
