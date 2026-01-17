@@ -76,7 +76,7 @@ export const UI_TRANSLATIONS = {
     downloadError: "فشل تحميل الصورة. قد يكون السبب ضعف الاتصال أو حظر أمني للمتصفح. حاول مرة أخرى.",
     rangeError: "يجب أن تكون آية النهاية أكبر من أو تساوي آية البداية",
     saveModalTitle: "حفظ الصورة",
-    saveModalDesc: "أنت تستخدم متصفح فيسبوك. لحفظ الصورة، يرجى الضغط مطولاً على الصورة أدناه ثم اختيار 'حفظ الصورة' أو 'Save Image'.",
+    saveModalDesc: "للحفظ: اضغط مطولاً على الصورة ثم اختر 'Save Image'. إذا لم تظهر، استخدم زر 'عرض الصورة كاملة' بالأسفل.",
     close: "إغلاق"
   },
   en: {
@@ -112,7 +112,7 @@ export const UI_TRANSLATIONS = {
     downloadError: "Download failed. Please check your connection.",
     rangeError: "End verse must be greater than or equal to start verse",
     saveModalTitle: "Save Image",
-    saveModalDesc: "You are using an in-app browser. To save, please long-press the image below and select 'Save Image'.",
+    saveModalDesc: "To Save: Long-press the image and select 'Save Image'. If that fails, use the 'Open Full Image' button below.",
     close: "Close"
   }
 };

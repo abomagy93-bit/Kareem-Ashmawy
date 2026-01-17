@@ -16,7 +16,8 @@ import {
   Pause,
   Users,
   X,
-  Share2
+  Share2,
+  ExternalLink
 } from 'lucide-react';
 import { CardConfig, VerseSegment, BackgroundType } from './types';
 import { SURAHS, LANGUAGES as TRANS_LANGUAGES, UI_TRANSLATIONS } from './constants';
@@ -413,11 +414,26 @@ export default function App() {
                    </button>
                </div>
                
-               <div className="bg-zinc-900 p-2 rounded-xl border border-zinc-700 shadow-2xl mb-6 w-full max-h-[60vh] flex items-center justify-center overflow-hidden">
-                   <img src={generatedImage} alt="Generated Card" className="max-w-full max-h-full object-contain rounded-lg" />
+               <div className="bg-zinc-900 p-2 rounded-xl border border-zinc-700 shadow-2xl mb-4 w-full max-h-[60vh] flex items-center justify-center overflow-hidden relative">
+                   {/* 
+                     CRITICAL FIX for In-App Browsers:
+                     1. pointer-events-auto: Re-enable interaction if parent disabled it.
+                     2. select-auto: Allow selection (required for some context menus).
+                     3. WebkitTouchCallout: 'default' -> Forces iOS to show the long-press menu.
+                   */}
+                   <img 
+                     src={generatedImage} 
+                     alt="Generated Card" 
+                     className="max-w-full max-h-full object-contain rounded-lg pointer-events-auto select-auto" 
+                     style={{ 
+                       WebkitTouchCallout: 'default',
+                       userSelect: 'auto',
+                       touchAction: 'auto'
+                     }}
+                   />
                </div>
 
-               <div className="text-center space-y-3">
+               <div className="text-center space-y-3 w-full">
                    <h3 className="text-xl font-bold text-gold-400 flex items-center justify-center gap-2">
                        <Share2 className="w-5 h-5" />
                        {t.saveModalTitle}
@@ -425,9 +441,19 @@ export default function App() {
                    <p className="text-zinc-300 text-sm leading-relaxed px-4">
                        {t.saveModalDesc}
                    </p>
+                   
+                   {/* Fallback Direct Link Button */}
+                   <a 
+                     href={generatedImage} 
+                     className="mt-4 px-6 py-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg border border-emerald-600 transition-all font-bold w-full flex items-center justify-center gap-2 shadow-lg"
+                   >
+                     <ExternalLink className="w-5 h-5" />
+                     {uiLang === 'ar' ? 'عرض الصورة كاملة (حل بديل)' : 'Open Full Image (Alternative)'}
+                   </a>
+
                    <button 
                       onClick={() => setGeneratedImage(null)}
-                      className="mt-4 px-8 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg border border-zinc-700 transition-all font-medium"
+                      className="mt-2 px-8 py-2 text-zinc-400 hover:text-white transition-all text-sm underline"
                    >
                        {t.close}
                    </button>
