@@ -18,7 +18,10 @@ import {
   X,
   Share2,
   ExternalLink,
-  Save
+  Save,
+  AlertTriangle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { CardConfig, VerseSegment, BackgroundType } from './types';
 import { SURAHS, LANGUAGES as TRANS_LANGUAGES, UI_TRANSLATIONS } from './constants';
@@ -36,9 +39,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   
-  // Save Modal State (For In-App Browsers)
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  
+  // In-App Browser Warning State
+  const [showBrowserWarning, setShowBrowserWarning] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
   // Radio State
   const [isRadioPlaying, setIsRadioPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -266,29 +270,21 @@ export default function App() {
     }
   };
 
-  // Helper to trigger native sharing
-  const shareImageFile = async (dataUrl: string, fileName: string) => {
-    try {
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `${fileName}.jpg`, { type: 'image/jpeg' });
-        
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: t.appTitle,
-                text: t.charity
-            });
-            return true;
-        }
-        return false;
-    } catch (e) {
-        console.warn("Sharing failed", e);
-        return false;
-    }
+  const handleCopyLink = () => {
+      const url = window.location.href;
+      navigator.clipboard.writeText(url).then(() => {
+          setLinkCopied(true);
+          setTimeout(() => setLinkCopied(false), 2000);
+      }).catch(err => console.error("Could not copy text: ", err));
   };
 
   const handleDownload = async (index: number, verse: VerseSegment) => {
+    // IMMEDIATE BLOCK FOR FACEBOOK BROWSER
+    if (isInAppBrowser) {
+        setShowBrowserWarning(true);
+        return;
+    }
+
     const ref = cardRefs.current[index];
     if (!ref) return;
 
@@ -334,23 +330,11 @@ export default function App() {
       }
 
       if (dataUrl) {
-          // Priority 1: In-App Browser -> Web Share API
-          if (isInAppBrowser) {
-              const shared = await shareImageFile(dataUrl, fileName);
-              if (shared) {
-                  // If share triggered successfully, we are done
-                  return; 
-              } else {
-                  // If share not supported/failed, show modal fallback
-                  setGeneratedImage(dataUrl);
-              }
-          } else {
-              // Standard Browser -> Download Link
-              const link = document.createElement('a');
-              link.download = `${fileName}.jpg`;
-              link.href = dataUrl;
-              link.click();
-          }
+          // Standard Browser -> Download Link
+          const link = document.createElement('a');
+          link.download = `${fileName}.jpg`;
+          link.href = dataUrl;
+          link.click();
       } else {
           throw new Error("Generated image is empty");
       }
@@ -408,49 +392,45 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-gray-100 font-cairo flex flex-col">
       
-      {/* Save Image Modal for In-App Browsers (Fallback if Share API fails) */}
-      {generatedImage && (
-        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
-           <div className="w-full max-w-lg flex flex-col items-center">
-               <div className="w-full flex justify-end mb-2">
-                   <button onClick={() => setGeneratedImage(null)} className="p-2 bg-zinc-800 rounded-full text-white hover:bg-zinc-700">
-                       <X className="w-6 h-6" />
-                   </button>
-               </div>
+      {/* Strict Browser Warning Modal for Facebook/Instagram */}
+      {showBrowserWarning && (
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+           <div className="w-full max-w-md bg-zinc-900 border border-gold-500/30 rounded-2xl p-6 shadow-2xl relative">
                
-               <div className="bg-zinc-900 p-1 rounded-xl border border-zinc-700 shadow-2xl mb-4 w-full max-h-[55vh] flex items-center justify-center overflow-hidden relative">
-                   <img 
-                     src={generatedImage} 
-                     alt="Generated Card" 
-                     className="max-w-full max-h-full object-contain rounded-lg pointer-events-auto select-auto" 
-                     style={{ 
-                       WebkitTouchCallout: 'default',
-                       userSelect: 'auto',
-                     }}
-                   />
-               </div>
+               <button onClick={() => setShowBrowserWarning(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">
+                   <X className="w-6 h-6" />
+               </button>
 
-               <div className="text-center space-y-3 w-full">
-                   <h3 className="text-xl font-bold text-gold-400 flex items-center justify-center gap-2">
-                       <Save className="w-5 h-5" />
-                       {t.saveModalTitle}
-                   </h3>
-                   <p className="text-zinc-300 text-sm leading-relaxed px-4">
-                       {t.saveModalDesc}
-                   </p>
+               <div className="flex flex-col items-center text-center space-y-4">
+                   <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mb-2">
+                       <AlertTriangle className="w-8 h-8 text-red-500" />
+                   </div>
                    
-                   {/* Primary Action: Share Sheet */}
-                   <button 
-                     onClick={() => shareImageFile(generatedImage, 'quran-card')} 
-                     className="mt-4 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg border border-emerald-500 transition-all font-bold w-full flex items-center justify-center gap-2 shadow-lg animate-pulse"
-                   >
-                     <Share2 className="w-5 h-5" />
-                     {t.shareNative}
-                   </button>
+                   <h3 className="text-xl font-bold text-white">{t.iabTitle}</h3>
+                   
+                   <p className="text-zinc-300 text-sm leading-relaxed px-2">
+                       {t.iabDesc}
+                   </p>
+
+                   <div className="bg-black/40 rounded-xl p-4 w-full text-right text-sm space-y-3 text-gold-400/90 border border-zinc-800">
+                       <p>{t.iabStep1}</p>
+                       <p>{t.iabStep2}</p>
+                       <p>{t.iabStep3}</p>
+                   </div>
+                   
+                   <div className="w-full pt-2">
+                       <button 
+                         onClick={handleCopyLink}
+                         className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg flex items-center justify-center gap-2 border border-zinc-700 transition-all"
+                       >
+                           {linkCopied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                           <span>{linkCopied ? t.linkCopied : t.copyLink}</span>
+                       </button>
+                   </div>
 
                    <button 
-                      onClick={() => setGeneratedImage(null)}
-                      className="mt-2 px-8 py-2 text-zinc-400 hover:text-white transition-all text-sm underline"
+                      onClick={() => setShowBrowserWarning(false)}
+                      className="text-zinc-500 text-sm hover:text-white underline"
                    >
                        {t.close}
                    </button>

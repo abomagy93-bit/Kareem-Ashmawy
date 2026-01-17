@@ -75,9 +75,15 @@ export const UI_TRANSLATIONS = {
     errorRetry: "يرجى المحاولة مرة أخرى.",
     downloadError: "فشل تحميل الصورة. قد يكون السبب ضعف الاتصال أو حظر أمني للمتصفح. حاول مرة أخرى.",
     rangeError: "يجب أن تكون آية النهاية أكبر من أو تساوي آية البداية",
-    saveModalTitle: "حفظ الصورة",
-    saveModalDesc: "بسبب قيود فيسبوك، أفضل طريقة للحفظ هي الضغط على زر المشاركة واختيار 'حفظ الصورة'.",
-    shareNative: "مشاركة / حفظ الصورة",
+    
+    // New Translations for In-App Browser Warning
+    iabTitle: "تنبيه هام",
+    iabDesc: "بسبب قيود شركة فيسبوك، تم تعطيل تحميل الصور داخل هذا المتصفح.",
+    iabStep1: "1. اضغط على النقاط الثلاث (•••) في زاوية الشاشة.",
+    iabStep2: "2. اختر 'فتح في المتصفح' (Open in Browser) أو (Open in Chrome/Safari).",
+    iabStep3: "3. ستتمكن من تحميل البطاقة بسهولة هناك.",
+    copyLink: "نسخ الرابط",
+    linkCopied: "تم النسخ!",
     close: "إغلاق"
   },
   en: {
@@ -112,9 +118,15 @@ export const UI_TRANSLATIONS = {
     errorRetry: "Please try again.",
     downloadError: "Download failed. Please check your connection.",
     rangeError: "End verse must be greater than or equal to start verse",
-    saveModalTitle: "Save Image",
-    saveModalDesc: "Due to Facebook browser restrictions, please use the Share button below to save the image.",
-    shareNative: "Share / Save Image",
+    
+    // New Translations for In-App Browser Warning
+    iabTitle: "Important Notice",
+    iabDesc: "Due to Facebook restrictions, downloads are disabled in this browser.",
+    iabStep1: "1. Tap the three dots (•••) at the corner of the screen.",
+    iabStep2: "2. Select 'Open in Browser' (Chrome or Safari).",
+    iabStep3: "3. You will be able to download the card easily there.",
+    copyLink: "Copy Link",
+    linkCopied: "Copied!",
     close: "Close"
   }
 };
