@@ -5,13 +5,20 @@ import { CombinedResponse, BackgroundType, VerseSegment, DesignConfig } from '..
 const MODEL_NAME = 'gemini-3-flash-preview';
 
 // Mapping user language selection to Quran API editions
+// Fixed German and Greek, and added new global languages
 const LANGUAGE_EDITIONS: Record<string, string> = {
   'English': 'en.sahih',
   'French': 'fr.hamidullah',
   'Spanish': 'es.cortes',
-  'German': 'de.abullais',
+  'German': 'de.bubenheim', // Changed from abullais for better reliability
   'Russian': 'ru.kuliev',
   'Greek': 'el.vlachos', 
+  'Indonesian': 'id.indonesian',
+  'Turkish': 'tr.diyanet',
+  'Urdu': 'ur.jalandhry',
+  'Italian': 'it.piccardo',
+  'Dutch': 'nl.keyzer',
+  'Chinese': 'zh.jian',
 };
 
 // Helper to convert standard numbers to Arabic-Indic numerals

@@ -11,10 +11,16 @@ export const FOOTER_TEXT = "صدقة جارية لأمي وجميع موتى ا�
 
 export const LANGUAGES = [
   { code: 'English', name: 'English (الإنجليزية)' },
+  { code: 'Indonesian', name: 'Indonesian (الإندونيسية)' },
+  { code: 'Turkish', name: 'Türkçe (التركية)' },
   { code: 'French', name: 'Français (الفرنسية)' },
-  { code: 'Spanish', name: 'Español (الإسبانية)' },
+  { code: 'Urdu', name: 'Urdu (الأردية)' },
   { code: 'German', name: 'Deutsch (الألمانية)' },
+  { code: 'Spanish', name: 'Español (الإسبانية)' },
   { code: 'Russian', name: 'Русский (الروسية)' },
+  { code: 'Italian', name: 'Italiano (الإيطالية)' },
+  { code: 'Dutch', name: 'Nederlands (الهولندية)' },
+  { code: 'Chinese', name: 'Chinese (الصينية)' },
   { code: 'Greek', name: 'Ελληνικά (اليونانية)' },
 ];
 
