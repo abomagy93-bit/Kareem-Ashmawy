@@ -278,63 +278,82 @@ export default function App() {
       // Extra buffer for image decoding
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Load library dynamically
+      const { toPng, toJpeg } = await import('html-to-image');
+
+      const fileName = `quran-card-${verse.surah}-${verse.ayah}`;
       const commonOptions = {
-          pixelRatio: 1.5, // Slight upscale for sharpness
           width: 1080,
           height: 1080,
-          skipAutoScale: true, // Fix for mobile rendering
-          fetchRequestInit: {
-             mode: 'cors' as RequestMode,
-          },
-          style: {
-             transform: 'none', 
-             transformOrigin: 'top left'
-          }
+          skipAutoScale: true,
+          fetchRequestInit: { mode: 'cors' as RequestMode },
+          style: { transform: 'none', transformOrigin: 'top left' }
       };
 
-      let dataUrl;
-      try {
-          // Dynamic Import to boost startup speed
-          const { toPng } = await import('html-to-image');
+      let dataUrl: string | undefined;
 
-          // First attempt with cache busting (safest for fresh external images)
+      // Strategy 1: High Quality PNG + Cache Bust (Best for desktop)
+      try {
           dataUrl = await toPng(ref, { 
-              ...commonOptions,
-              cacheBust: true, 
+              ...commonOptions, 
+              pixelRatio: 1.5,
+              cacheBust: true 
           });
-      } catch (firstErr) {
-          console.warn("First download attempt failed, retrying without cache bust...", firstErr);
-          // Retry without cache busting (in case of CORS headers mismatch on cached items)
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const { toPng } = await import('html-to-image'); // Re-import safe
-          dataUrl = await toPng(ref, { 
-              ...commonOptions,
-              cacheBust: false,
-          });
+      } catch (e) { console.warn("Strategy 1 failed", e); }
+
+      // Strategy 2: High Quality PNG + No Cache Bust (Fallback for CORS edge cases)
+      if (!dataUrl) {
+          try {
+              dataUrl = await toPng(ref, { 
+                  ...commonOptions, 
+                  pixelRatio: 1.5,
+                  cacheBust: false
+              });
+          } catch (e) { console.warn("Strategy 2 failed", e); }
+      }
+
+      // Strategy 3: Standard Quality PNG (Best for mobile memory)
+      if (!dataUrl) {
+          try {
+              dataUrl = await toPng(ref, { 
+                  ...commonOptions, 
+                  pixelRatio: 1, 
+                  cacheBust: true 
+              });
+          } catch (e) { console.warn("Strategy 3 failed", e); }
+      }
+
+      // Strategy 4: JPEG (Ultimate fallback, no transparency but very reliable)
+      if (!dataUrl) {
+           try {
+              dataUrl = await toJpeg(ref, { 
+                  ...commonOptions, 
+                  pixelRatio: 1, 
+                  quality: 0.95,
+                  backgroundColor: '#000000',
+                  cacheBust: true 
+              });
+          } catch (e) { console.error("All strategies failed", e); throw e; }
       }
 
       if (dataUrl) {
           const link = document.createElement('a');
-          link.download = `quran-card-${verse.surah}-${verse.ayah}.png`;
+          link.download = `${fileName}.${dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png'}`;
           link.href = dataUrl;
           link.click();
       } else {
-          throw new Error("Failed to generate image data (URL is empty)");
+          throw new Error("Generated image is empty");
       }
 
     } catch (err: any) {
-      // Improved Error Logging
       console.error("Download failed full error:", err);
       let errorMessage = t.downloadError;
       
-      // Parse error object to avoid [object Object]
+      // Safely stringify error
       if (err) {
-         if (typeof err === 'string') errorMessage += ` (${err})`;
-         else if (err.message) errorMessage += ` (${err.message})`;
-         else if (err.type === 'error') errorMessage += " (Network/CORS Error)";
-         else try {
-             const str = JSON.stringify(err);
-             if (str !== '{}') errorMessage += ` (${str})`;
+         try {
+             const str = err.message || JSON.stringify(err);
+             if (str && str !== '{}') errorMessage += ` (${str.substring(0, 100)})`;
          } catch(e) {}
       }
       
